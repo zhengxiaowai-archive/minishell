@@ -9,7 +9,7 @@
 void get_command(int i);
 int check(const char *str);
 void getname(char *name);
-
+void print_command();
 void shell_loop()
 {
 	while(1)
@@ -20,6 +20,7 @@ void shell_loop()
 		if(-1 == read_command())
 			break;
 		parse_command();
+		print_command();
 		execute_comand();
 	}
 
@@ -36,8 +37,9 @@ int read_command()
 
 int parse_command()
 {
+	if(check("\n"))
+		return 0;
 	get_command(0);
-
 	/*判断是否有输入重定向符*/
 	if(check("<"))
 		getname(infile);
@@ -53,9 +55,12 @@ int parse_command()
 	}
 
 	/*判定时候有输出重定向符*/
-	if(check("<"))
+	if(check(">"))
+	{
+		if(check(">"))
+			append = 1;
 		getname(outfile);
-
+	}
 	/*判定是否后台作业*/
 	if(check("&"))
 		backgnd = 1;
@@ -71,9 +76,6 @@ int parse_command()
 		fprintf(stderr, "Command line syntax error");
 		return -1;
 	}
-
-	return 0;
-
 
 }
 
@@ -100,8 +102,8 @@ void get_command(int i)
 	while(*lineptr != '\0')
 	{
 		/*除去空格*/
-		while(*lineptr == ' ' || *lineptr == '\t')
-			(*lineptr)++;
+		while (*lineptr == ' ' || *lineptr == '\t')
+			lineptr++;
 		
 		cmd[i].args[j] = avptr;
 		
@@ -141,16 +143,68 @@ void get_command(int i)
 
 int check(const char *str)
 {
+	char *p;
+	while(*lineptr == ' ' || *lineptr == '\t')
+		lineptr++;
+	
+	p = lineptr;
+	while(*str != '\0' && *str == *p)
+	{
+		str++;
+		p++;
+	}
+	
+	if(*str == '\0')
+	{
+		lineptr = p;  //lineptr要移动过匹配的字符串
+		return 1;
+	}
+	
+	/*lineptr不变*/
 	return 0;
 }
 
 void getname(char *name)
 {
+	while(*lineptr == ' ' || *lineptr == '\t')
+		lineptr++;
 	
+	while(*lineptr != '\0'
+			&& *lineptr != ' '
+			&& *lineptr != '\t'
+			&& *lineptr != '>'
+			&& *lineptr != '<'
+			&& *lineptr != '|'
+			&& *lineptr != '&'
+			&& *lineptr != '\n')
+			{
+				*name++ = *lineptr++;
+			}
+			
+			*name = '\0';
 }
 
-
-
+void print_command()
+{
+	int i;
+	int j;
+	printf("cmd_count = %d\n", cmd_count);
+	if(infile[0] != '\0')
+		printf("infile = [%s]\n", infile);
+	if(outfile[0] != '\0')
+		printf("outfile = [%s]\n", outfile);
+	
+	for(i = 0; i < cmd_count; ++i)
+	{
+		j = 0;
+		while(cmd[i].args[j] != NULL)
+		{
+			printf("[%s]", cmd[i].args[j]);
+			j++;
+		}
+		printf("\n");
+	}
+}
 
 
 

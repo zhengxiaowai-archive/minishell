@@ -13,6 +13,7 @@ char outfile[MAXLINE + 1];
 
 int cmd_count;
 int backgnd;
+int append;
 
 COMMAND cmd[PIPELINE];
 int main(int argc, char *argv[])

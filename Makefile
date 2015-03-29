@@ -10,4 +10,4 @@ $(OBJS):%.o:%.c
 	$(CC) -c $< -o $@ $(CFLAGS)
 
 clean:
-	-$(RM) $(OBJS) $(TARGET)
+	-$(RM) $(OBJS) $(TARGET) core

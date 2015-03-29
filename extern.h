@@ -10,6 +10,7 @@ extern char infile[MAXLINE + 1];
 extern char outfile[MAXLINE + 1];
 extern int cmd_count;
 extern int backgnd;
+extern int append;
 
 COMMAND cmd[PIPELINE];
 
