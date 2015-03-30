@@ -14,6 +14,7 @@ char outfile[MAXLINE + 1];
 int cmd_count;
 int backgnd;
 int append;
+int lastpid;
 
 COMMAND cmd[PIPELINE];
 int main(int argc, char *argv[])

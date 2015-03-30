@@ -6,10 +6,14 @@
 #include <sys/types.h>
 #include <wait.h>
 
+#define OPEN_MAX 1024
+
 void get_command(int i);
 int check(const char *str);
 void getname(char *name);
 void print_command();
+void forkexec(COMMAND *pcmd);
+
 void shell_loop()
 {
 	while(1)
@@ -18,7 +22,10 @@ void shell_loop()
 		fflush(stdout);
 		init();
 		if(-1 == read_command())
+		{
+			perror("read failed");
 			break;
+		}
 		parse_command();
 		print_command();
 		execute_comand();
@@ -91,6 +98,35 @@ int execute_comand()
 		execvp(cmd.args[0], cmd.args);
 
 		wait(NULL); */
+		
+		/*ls | grep init | wc -w*/
+		
+		int i = 0;
+		int fd = 0;
+		int fds[2];
+		for(i =0; i < cmd_count; ++i)
+		{
+			if(i < cmd_count - 1)
+			{
+				pipe(fds);
+				cmd[i].outfd = fds[1];
+				cmd[i + 1].infd = fds[0];
+			}
+			
+			forkexec(&cmd[i]);
+			
+			if((fd = cmd[i].infd) != 0)
+			{
+				close(fd);
+			}
+			if((fd = cmd[i].outfd) != 1)
+			{
+				close(fd);
+			}
+			
+		}
+		
+		while(wait(NULL) != lastpid);
 	return 0;
 }
 
@@ -206,6 +242,41 @@ void print_command()
 	}
 }
 
+void forkexec(COMMAND *pcmd)
+{
+	int i;
+	pid_t pid;
+	pid = fork();
+	if(pid < 0)
+	{
+		perror("fork failed");
+		return;
+	}
+	else if(pid > 0)
+	{
+		lastpid = pid;
+	}
+	else
+	{
+		if(pcmd->infd != 0)
+		{
+			close(0);
+			dup(pcmd->infd);//把标准输入关闭，然后复制一个管道写端到0
+		}
+		
+		if(pcmd->outfd != 1)
+		{
+			close(1);
+			dup(pcmd->outfd);//把标准输出关闭，然后复制一个管道读端到1，这样程序的输入输出就经过管道了
+		}
+			
+		for (i =3; i < OPEN_MAX; ++i)
+			close(i);
+		execvp(pcmd->args[0], pcmd->args);
+		perror("execvp failed\n");
+		return;
+	}
+}
 
 
 

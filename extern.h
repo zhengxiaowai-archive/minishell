@@ -11,6 +11,7 @@ extern char outfile[MAXLINE + 1];
 extern int cmd_count;
 extern int backgnd;
 extern int append;
+extern int lastpid;
 
 COMMAND cmd[PIPELINE];
 
