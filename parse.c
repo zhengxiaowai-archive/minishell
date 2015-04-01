@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <wait.h>
+#include <fcntl.h>
 
 #define OPEN_MAX 1024
 
@@ -12,7 +13,7 @@ void get_command(int i);
 int check(const char *str);
 void getname(char *name);
 void print_command();
-void forkexec(COMMAND *pcmd);
+void forkexec(int i);
 
 void shell_loop()
 {
@@ -100,6 +101,23 @@ int execute_comand()
 		wait(NULL); */
 		
 		/*ls | grep init | wc -w*/
+		if(infile[0] != '\0')
+		{
+			cmd[0].infd = open(infile, O_RDONLY);
+		}
+		if(outfile[0] != '\0')
+		{
+			if(append)
+				cmd[cmd_count - 1].outfd = open(outfile, O_WRONLY | O_CREAT | O_APPEND, 00666 );
+			else
+				cmd[cmd_count - 1].outfd = open(outfile, O_WRONLY | O_CREAT | O_TRUNC, 00666 );
+		}	
+		
+		//因为后台作业不会调用wait等待子进程退出，避免僵死进程
+		if(backgnd == 1)
+		{
+			signal(SIGCHLD, SIG_IGN);
+		}
 		
 		int i = 0;
 		int fd = 0;
@@ -113,7 +131,7 @@ int execute_comand()
 				cmd[i + 1].infd = fds[0];
 			}
 			
-			forkexec(&cmd[i]);
+			forkexec(i);
 			
 			if((fd = cmd[i].infd) != 0)
 			{
@@ -126,7 +144,12 @@ int execute_comand()
 			
 		}
 		
-		while(wait(NULL) != lastpid);
+		if(backgnd == 0)
+		{
+			//前台作业，需要等待管道中最后一个命令退出
+			while(wait(NULL) != lastpid);
+		}
+		
 	return 0;
 }
 
@@ -242,9 +265,12 @@ void print_command()
 	}
 }
 
-void forkexec(COMMAND *pcmd)
+void forkexec(int i)
 {
-	int i;
+	/*输出重定向>*/
+
+	
+	/*>*/
 	pid_t pid;
 	pid = fork();
 	if(pid < 0)
@@ -258,21 +284,37 @@ void forkexec(COMMAND *pcmd)
 	}
 	else
 	{
-		if(pcmd->infd != 0)
+		//将第一条将简单命令重定向带null文件
+		if(cmd[i].infd == 0 && backgnd == 1)
+		{
+			cmd[i].infd = open("/dev/null", O_RDONLY);
+		}
+		//将第一个简单命令做为组长
+		if(i == 0)
+			setpgid(0,0);
+		if(cmd[i].infd != 0)
 		{
 			close(0);
-			dup(pcmd->infd);//把标准输入关闭，然后复制一个管道写端到0
+			dup(cmd[i].infd);//把标准输入关闭，然后复制一个管道写端到0
 		}
 		
-		if(pcmd->outfd != 1)
+		if(cmd[i].outfd != 1)
 		{
 			close(1);
-			dup(pcmd->outfd);//把标准输出关闭，然后复制一个管道读端到1，这样程序的输入输出就经过管道了
+			dup(cmd[i].outfd);//把标准输出关闭，然后复制一个管道读端到1，这样程序的输入输出就经过管道了
 		}
 			
-		for (i =3; i < OPEN_MAX; ++i)
-			close(i);
-		execvp(pcmd->args[0], pcmd->args);
+		int j;
+		for (j =3; j < OPEN_MAX; ++j)
+			close(j);
+		
+		//前台作业能够接收SIGINT,SIGQUIT信号
+		if(backgnd == 0)
+		{
+			signal(SIGINT, SIG_DFL);
+			signal(SIGQUIT, SIG_DFL);
+		}
+		execvp(cmd[i].args[0], cmd[i].args);
 		perror("execvp failed\n");
 		return;
 	}
