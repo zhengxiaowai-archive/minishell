@@ -5,7 +5,7 @@
 #define MAXARG 20
 #define PIPELINE 5
 #define MAXNAME 100 
-
+#define OPEN_MAX 1024
 typedef struct command
 {
 	char *args[MAXARG + 1];
