@@ -1,5 +1,3 @@
-# minishell
-minishell的实现
-支持管道
-支持重定向,有BUG
-4.2日，优化
+# Mini Shell
+
+程序有BUG，代码丢失，不再更新
